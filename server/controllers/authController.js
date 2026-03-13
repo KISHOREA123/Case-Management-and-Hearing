@@ -70,6 +70,17 @@ const getMe = async (req, res) => {
     res.json(req.user);
 };
 
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+const logout = async (req, res) => {
+    try {
+        res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // Generate JWT
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -77,4 +88,4 @@ const generateToken = (id) => {
     });
 };
 
-module.exports = { register, login, getMe };
+module.exports = { register, login, logout, getMe };

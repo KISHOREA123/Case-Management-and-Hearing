@@ -11,16 +11,20 @@ import {
     Loader2,
     Activity,
     AlertTriangle,
-    History
+    History,
+    AlarmClock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from '../components/StatCard';
 import { cn } from '../utils/cn';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const AdminDashboard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [deadlines, setDeadlines] = useState({ upcoming: [], overdue: [] });
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -34,6 +38,8 @@ const AdminDashboard = () => {
             }
         };
         fetchDashboardData();
+
+        api.get('/deadlines/upcoming').then(res => setDeadlines(res.data)).catch(() => { });
     }, []);
 
     if (loading) {
@@ -137,7 +143,9 @@ const AdminDashboard = () => {
                                     <Clock className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="font-bold text-sm leading-none mb-1">{hearing.title || 'Hearing'}</p>
+                                    <p className="font-bold text-sm leading-none mb-1">
+                                        Hearing #{hearing.case_id?.case_number}
+                                    </p>
                                     <p className="text-xs text-muted-foreground mb-1 truncate">{hearing.case_id?.case_title}</p>
                                     <p className="text-xs font-bold text-primary">
                                         {new Date(hearing.hearing_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -149,7 +157,10 @@ const AdminDashboard = () => {
                                 No upcoming hearings.
                             </div>
                         )}
-                        <button className="w-full py-2 bg-accent text-accent-foreground rounded-lg text-sm font-medium hover:bg-border transition-colors">
+                        <button
+                            onClick={() => navigate('/calendar')}
+                            className="w-full py-2 bg-accent text-accent-foreground rounded-lg text-sm font-medium hover:bg-border transition-colors"
+                        >
                             View Calendar
                         </button>
                     </div>
@@ -200,6 +211,50 @@ const AdminDashboard = () => {
                                         <span className="text-[10px] text-muted-foreground font-medium">{formatDistanceToNow(new Date(act.created_at), { addSuffix: true })}</span>
                                     </div>
                                 </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Deadlines Panel */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Upcoming Deadlines */}
+                <div className="bg-card border border-border rounded-xl p-6">
+                    <h3 className="font-bold text-base mb-4 flex items-center gap-2">
+                        <AlarmClock className="w-5 h-5 text-orange-500" />
+                        Upcoming Deadlines (7 days)
+                    </h3>
+                    <div className="space-y-3">
+                        {(deadlines.upcoming || []).length === 0 ? (
+                            <p className="text-muted-foreground text-sm text-center py-2">No upcoming deadlines.</p>
+                        ) : deadlines.upcoming.map(d => (
+                            <div key={d._id} className="flex items-center justify-between text-sm">
+                                <div>
+                                    <p className="font-medium">{d.deadline_title}</p>
+                                    <p className="text-xs text-muted-foreground">{d.case_id?.case_number || 'Unknown'}</p>
+                                </div>
+                                <span className="text-xs bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded-full">{new Date(d.deadline_date).toLocaleDateString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                {/* Overdue Deadlines */}
+                <div className="bg-card border border-red-500/20 rounded-xl p-6">
+                    <h3 className="font-bold text-base mb-4 flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                        Overdue Deadlines
+                    </h3>
+                    <div className="space-y-3">
+                        {(deadlines.overdue || []).length === 0 ? (
+                            <p className="text-muted-foreground text-sm text-center py-2">No overdue deadlines. ✅</p>
+                        ) : deadlines.overdue.map(d => (
+                            <div key={d._id} className="flex items-center justify-between text-sm">
+                                <div>
+                                    <p className="font-medium text-red-500">{d.deadline_title}</p>
+                                    <p className="text-xs text-muted-foreground">{d.case_id?.case_number || 'Unknown'}</p>
+                                </div>
+                                <span className="text-xs bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full">{new Date(d.deadline_date).toLocaleDateString()}</span>
                             </div>
                         ))}
                     </div>

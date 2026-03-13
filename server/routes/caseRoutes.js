@@ -8,16 +8,17 @@ const {
     deleteCase
 } = require('../controllers/caseController');
 const { protect, authorize } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissionMiddleware');
 
 router.use(protect);
 
 router.route('/')
     .get(getCases)
-    .post(authorize('admin', 'lawyer'), createCase);
+    .post(authorize('admin', 'lawyer'), requirePermission('case_create'), createCase);
 
 router.route('/:id')
     .get(getCaseById)
-    .put(authorize('admin', 'lawyer'), updateCase)
-    .delete(authorize('admin'), deleteCase);
+    .put(authorize('admin', 'lawyer'), requirePermission('case_edit'), updateCase)
+    .delete(authorize('admin', 'lawyer'), requirePermission('case_delete'), deleteCase);
 
 module.exports = router;

@@ -7,8 +7,8 @@ const caseSchema = new mongoose.Schema({
     },
     case_number: {
         type: String,
-        required: [true, 'Please add a case number'],
-        unique: true
+        unique: true,
+        sparse: true   // allows multiple docs without case_number during migration
     },
     case_type_id: {
         type: mongoose.Schema.ObjectId,
@@ -40,10 +40,6 @@ const caseSchema = new mongoose.Schema({
         enum: ['Low', 'Medium', 'High', 'Urgent'],
         default: 'Medium'
     },
-    tags: [{
-        type: mongoose.Schema.ObjectId,
-        ref: 'Tag'
-    }],
     filing_date: {
         type: Date
     },

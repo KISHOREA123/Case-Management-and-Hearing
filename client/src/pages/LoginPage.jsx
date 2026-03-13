@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Gavel, Mail, Lock, Loader2, AlertCircle, Shield, Scale } from 'lucide-react';
+import { Gavel, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
@@ -112,29 +112,7 @@ const LoginPage = () => {
                         </button>
                     </form>
 
-                    <div className="relative py-4">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border"></div>
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">Quick Login (Dev Only)</span>
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <button
-                            onClick={() => { setEmail('admin@gmail.com'); setPassword('admin123'); }}
-                            className="flex items-center justify-center gap-2 h-10 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-accent transition-colors"
-                        >
-                            <Shield className="w-4 h-4 text-primary" /> Admin
-                        </button>
-                        <button
-                            onClick={() => { setEmail('Kishore@gmail.com'); setPassword('12345678'); }}
-                            className="flex items-center justify-center gap-2 h-10 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-accent transition-colors"
-                        >
-                            <Scale className="w-4 h-4 text-primary" /> Lawyer
-                        </button>
-                    </div>
 
                     <div className="text-center pt-4">
                         <p className="text-sm text-muted-foreground">

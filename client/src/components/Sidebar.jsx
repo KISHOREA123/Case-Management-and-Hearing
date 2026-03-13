@@ -12,7 +12,8 @@ import {
     ChevronLeft,
     ChevronRight,
     MessageSquare,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../utils/cn';
@@ -29,6 +30,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         { title: 'Clients', icon: <Users className="w-5 h-5" />, path: '/clients' },
         { title: 'Courts', icon: <Gavel className="w-5 h-5" />, path: '/courts' },
         { title: 'Invoices', icon: <FileText className="w-5 h-5" />, path: '/invoices' },
+        { title: 'Permissions', icon: <Shield className="w-5 h-5" />, path: '/permissions' },
     ];
 
     const lawyerLinks = [

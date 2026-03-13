@@ -1,4 +1,4 @@
-const { Conversation, Message } = require('../models');
+const { Conversation, Message, Case } = require('../models');
 
 // @desc    Get or create conversation for a case
 // @route   GET /api/chat/case/:caseId
@@ -45,6 +45,8 @@ const sendMessage = async (req, res) => {
             conversation.participants.push(req.user.id);
             await conversation.save();
         }
+
+        const parentCase = conversation ? await Case.findById(conversation.case_id) : null;
 
         res.status(201).json(newMessage);
     } catch (error) {

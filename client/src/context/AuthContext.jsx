@@ -7,19 +7,35 @@ export const AuthProvider = ({ children }) => {
     const [accounts, setAccounts] = useState([]);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [permissions, setPermissions] = useState({});
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    const loadUserPermissions = async () => {
+        try {
+            const { data } = await api.get('/permissions/me');
+            setPermissions(data.permissions);
+            setIsAdmin(data.isAdmin);
+        } catch (error) {
+            console.error('Failed to fetch permissions', error);
+        }
+    };
 
     useEffect(() => {
         const savedAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
         const activeAccountId = localStorage.getItem('activeAccountId');
 
-        if (savedAccounts.length > 0) {
-            setAccounts(savedAccounts);
-            const activeAccount = savedAccounts.find(a => a.user._id === activeAccountId) || savedAccounts[0];
-            setUser(activeAccount.user);
-            localStorage.setItem('token', activeAccount.token);
-            localStorage.setItem('activeAccountId', activeAccount.user._id);
-        }
-        setLoading(false);
+        const initAuth = async () => {
+            if (savedAccounts.length > 0) {
+                setAccounts(savedAccounts);
+                const activeAccount = savedAccounts.find(a => a.user._id === activeAccountId) || savedAccounts[0];
+                setUser(activeAccount.user);
+                localStorage.setItem('token', activeAccount.token);
+                localStorage.setItem('activeAccountId', activeAccount.user._id);
+                await loadUserPermissions();
+            }
+            setLoading(false);
+        };
+        initAuth();
     }, []);
 
     const login = async (email, password) => {
@@ -34,6 +50,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('activeAccountId', data._id);
 
+        await loadUserPermissions();
+
         return data;
     };
 
@@ -47,7 +65,13 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await api.post('/auth/logout');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+
         const updatedAccounts = accounts.filter(a => a.user._id !== user._id);
         setAccounts(updatedAccounts);
         localStorage.setItem('accounts', JSON.stringify(updatedAccounts));
@@ -77,7 +101,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, accounts, loading, login, register, logout, switchAccount, setUser }}>
+        <AuthContext.Provider value={{ user, accounts, loading, permissions, isAdmin, login, register, logout, switchAccount, setUser }}>
             {children}
         </AuthContext.Provider>
     );

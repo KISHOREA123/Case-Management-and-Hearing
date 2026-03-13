@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Gavel, Mail, Lock, User, Phone, Loader2, AlertCircle } from 'lucide-react';
+import { Gavel, Mail, Lock, User, Phone, Loader2, AlertCircle, ShieldCheck, Zap, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import CustomSelect from '../components/CustomSelect';
@@ -48,18 +48,26 @@ const SignupPage = () => {
                     <span className="text-2xl font-bold tracking-tight">CMH</span>
                 </Link>
 
-                <div className="relative z-10">
-                    <div className="p-8 rounded-2xl bg-primary/5 border border-primary/10 mb-8">
-                        <h2 className="text-2xl font-bold mb-4">Start your trial today</h2>
-                        <p className="text-muted-foreground">Join thousands of attorneys who trust CMH to manage their practice.</p>
+                <div className="relative z-10 space-y-12">
+                    <div>
+                        <h2 className="text-4xl font-bold tracking-tight mb-4 text-foreground">Elevate your legal practice.</h2>
+                        <p className="text-lg text-muted-foreground max-w-sm">Experience the modern way to manage cases, clients, and hearings with precision.</p>
                     </div>
-                    <div className="space-y-4">
-                        {["30-day free trial", "No credit card required", "Instant access"].map((text, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                                    <div className="w-2 h-2 rounded-full bg-primary"></div>
+
+                    <div className="space-y-8">
+                        {[
+                            { icon: ShieldCheck, title: "Secure & Compliant", desc: "Enterprise-grade security for your sensitive legal data." },
+                            { icon: Zap, title: "Efficiency Redefined", desc: "Automate routine tasks and focus on winning cases." },
+                            { icon: Clock, title: "Real-time Updates", desc: "Stay informed with instant notifications for hearings." }
+                        ].map((feature, i) => (
+                            <div key={i} className="flex gap-4">
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                                    <feature.icon className="w-6 h-6 text-primary" />
                                 </div>
-                                <span className="text-sm font-medium">{text}</span>
+                                <div>
+                                    <h4 className="font-semibold text-foreground">{feature.title}</h4>
+                                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{feature.desc}</p>
+                                </div>
                             </div>
                         ))}
                     </div>

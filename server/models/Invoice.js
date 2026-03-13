@@ -29,7 +29,11 @@ const invoiceSchema = new mongoose.Schema({
     },
     due_date: {
         type: Date
-    }
+    },
+    items: [{
+        description: { type: String, required: true },
+        amount: { type: Number, required: true }
+    }]
 }, {
     timestamps: true
 });

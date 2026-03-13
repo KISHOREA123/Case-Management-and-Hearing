@@ -16,15 +16,25 @@ const courtRoutes = require('./routes/courtRoutes');
 const caseTypeRoutes = require('./routes/caseTypeRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const timelineRoutes = require('./routes/timelineRoutes');
-const tagRoutes = require('./routes/tagRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const permissionRoutes = require('./routes/permissionRoutes');
+const deadlineRoutes = require('./routes/deadlineRoutes');
+const deadlineDashboardRoutes = require('./routes/deadlineDashboardRoutes');
 
 const app = express();
 
 // Connect to Database
 connectDB();
+
+// Initialize default permissions in DB
+const { initializePermissions } = require('./middleware/permissionMiddleware');
+initializePermissions();
+
+// Start cron jobs
+const { startDeadlineCron } = require('./cron/deadlineReminders');
+startDeadlineCron();
 
 // Middleware
 app.use(helmet());
@@ -48,10 +58,12 @@ app.use('/api/courts', courtRoutes);
 app.use('/api/case-types', caseTypeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/timeline', timelineRoutes);
-app.use('/api/tags', tagRoutes);
 app.use('/api/docs', documentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/permissions', permissionRoutes);
+app.use('/api/cases/:id/deadlines', deadlineRoutes);
+app.use('/api/deadlines', deadlineDashboardRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

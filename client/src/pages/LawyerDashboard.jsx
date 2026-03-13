@@ -9,16 +9,20 @@ import {
     Loader2,
     Activity,
     History,
-    AlertTriangle
+    AlertTriangle,
+    AlarmClock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from '../components/StatCard';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { cn } from '../utils/cn';
 
 const LawyerDashboard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [deadlines, setDeadlines] = useState({ upcoming: [], overdue: [] });
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -32,6 +36,7 @@ const LawyerDashboard = () => {
             }
         };
         fetchDashboardData();
+        api.get('/deadlines/upcoming').then(res => setDeadlines(res.data)).catch(() => { });
     }, []);
 
     if (loading) {
@@ -59,7 +64,10 @@ const LawyerDashboard = () => {
                     <p className="text-muted-foreground">Here's what's happening with your cases today.</p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="flex items-center gap-2 bg-accent text-accent-foreground px-4 py-2 rounded-lg font-medium hover:bg-border transition-all">
+                    <button
+                        onClick={() => navigate('/hearings')}
+                        className="flex items-center gap-2 bg-accent text-accent-foreground px-4 py-2 rounded-lg font-medium hover:bg-border transition-all"
+                    >
                         Schedule Hearing
                     </button>
                     <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium shadow hover:bg-primary/90 transition-all">
@@ -158,6 +166,34 @@ const LawyerDashboard = () => {
                     {(!urgentCases || urgentCases.length === 0) && (
                         <p className="col-span-full text-sm text-muted-foreground italic text-center py-8">No urgent cases currently flagged.</p>
                     )}
+                </div>
+            </div>
+
+            {/* Deadlines Panel */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-card border border-border rounded-xl p-6">
+                    <h3 className="font-bold text-base mb-4 flex items-center gap-2"><AlarmClock className="w-5 h-5 text-orange-500" />Upcoming Deadlines (7 days)</h3>
+                    <div className="space-y-3">
+                        {(deadlines.upcoming || []).length === 0 ? <p className="text-muted-foreground text-sm text-center py-2">No upcoming deadlines.</p>
+                            : deadlines.upcoming.map(d => (
+                                <div key={d._id} className="flex items-center justify-between text-sm">
+                                    <div><p className="font-medium">{d.deadline_title}</p><p className="text-xs text-muted-foreground">{d.case_id?.case_number || 'Unknown'}</p></div>
+                                    <span className="text-xs bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded-full">{new Date(d.deadline_date).toLocaleDateString()}</span>
+                                </div>
+                            ))}
+                    </div>
+                </div>
+                <div className="bg-card border border-red-500/20 rounded-xl p-6">
+                    <h3 className="font-bold text-base mb-4 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-red-500" />Overdue Deadlines</h3>
+                    <div className="space-y-3">
+                        {(deadlines.overdue || []).length === 0 ? <p className="text-muted-foreground text-sm text-center py-2">No overdue deadlines. ✅</p>
+                            : deadlines.overdue.map(d => (
+                                <div key={d._id} className="flex items-center justify-between text-sm">
+                                    <div><p className="font-medium text-red-500">{d.deadline_title}</p><p className="text-xs text-muted-foreground">{d.case_id?.case_number || 'Unknown'}</p></div>
+                                    <span className="text-xs bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full">{new Date(d.deadline_date).toLocaleDateString()}</span>
+                                </div>
+                            ))}
+                    </div>
                 </div>
             </div>
         </div>

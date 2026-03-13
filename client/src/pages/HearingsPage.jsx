@@ -9,6 +9,7 @@ import {
     AlertCircle,
     X
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
 import { cn } from '../utils/cn';
@@ -19,6 +20,7 @@ const HearingsPage = () => {
     const [cases, setCases] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         case_id: '',
         hearing_date: '',
@@ -111,8 +113,8 @@ const HearingsPage = () => {
                             ) : hearings.map((h) => (
                                 <tr key={h._id} className="hover:bg-accent/30 transition-colors">
                                     <td className="px-6 py-4">
-                                        <p className="font-semibold">{h.case?.case_title}</p>
-                                        <p className="text-xs text-muted-foreground">{h.case?.case_number}</p>
+                                        <p className="font-semibold">{h.case_id?.case_title}</p>
+                                        <p className="text-xs text-muted-foreground">{h.case_id?.case_number}</p>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2 mb-1">
@@ -139,8 +141,11 @@ const HearingsPage = () => {
                                         {h.notes || '-'}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground">
-                                            <MoreVertical className="w-4 h-4" />
+                                        <button
+                                            onClick={() => navigate(`/cases/${h.case_id?._id}`)}
+                                            className="p-2 hover:bg-accent rounded-lg transition-colors text-primary font-medium text-xs flex items-center gap-1 ml-auto"
+                                        >
+                                            View Case
                                         </button>
                                     </td>
                                 </tr>

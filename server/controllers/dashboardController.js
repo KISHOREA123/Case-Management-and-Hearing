@@ -11,7 +11,9 @@ const getDashboardData = async (req, res) => {
         if (role === 'admin') {
             const totalCases = await Case.countDocuments();
             const activeCases = await Case.countDocuments({ status: 'Active' });
-            const totalHearings = await Hearing.countDocuments({ date: { $gte: new Date() } });
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            const totalHearings = await Hearing.countDocuments({ hearing_date: { $gte: startOfDay } });
             const totalClients = await Client.countDocuments();
 
             const recentCases = await Case.find()
@@ -19,7 +21,7 @@ const getDashboardData = async (req, res) => {
                 .sort('-createdAt')
                 .limit(5);
 
-            const upcomingHearings = await Hearing.find({ hearing_date: { $gte: new Date() } })
+            const upcomingHearings = await Hearing.find({ hearing_date: { $gte: startOfDay } })
                 .populate('case_id', 'case_title case_number')
                 .sort('hearing_date hearing_time')
                 .limit(3);
@@ -29,8 +31,12 @@ const getDashboardData = async (req, res) => {
                 .sort('-createdAt')
                 .limit(5);
 
-            const recentActivity = await CaseTimeline.find()
-                .populate('case_id', 'case_title')
+            // Only show timeline entries for cases that still exist
+            const existingCaseIds = await Case.find().select('_id').lean();
+            const existingIds = existingCaseIds.map(c => c._id);
+
+            const recentActivity = await CaseTimeline.find({ case_id: { $in: existingIds } })
+                .populate('case_id', 'case_title case_number')
                 .populate('created_by', 'name')
                 .sort('-created_at')
                 .limit(10);
@@ -82,7 +88,7 @@ const getDashboardData = async (req, res) => {
                 .limit(5);
 
             const recentActivity = await CaseTimeline.find({ case_id: { $in: lawyerCaseIds } })
-                .populate('case_id', 'case_title')
+                .populate('case_id', 'case_title case_number')
                 .populate('created_by', 'name')
                 .sort('-created_at')
                 .limit(10);

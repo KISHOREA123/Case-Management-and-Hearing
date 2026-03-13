@@ -12,7 +12,6 @@ const CaseDocument = require('./CaseDocument');
 const Conversation = require('./Conversation');
 const Message = require('./Message');
 const HearingNote = require('./HearingNote');
-const Tag = require('./Tag');
 
 module.exports = {
     User,
@@ -28,6 +27,5 @@ module.exports = {
     CaseDocument,
     Conversation,
     Message,
-    HearingNote,
-    Tag
+    HearingNote
 };

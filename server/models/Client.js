@@ -22,6 +22,11 @@ const clientSchema = new mongoose.Schema({
     assigned_lawyer: {
         type: mongoose.Schema.ObjectId,
         ref: 'User'
+    },
+    role: {
+        type: String,
+        enum: ['Petitioner', 'Defender'],
+        default: 'Petitioner'
     }
 }, {
     timestamps: true

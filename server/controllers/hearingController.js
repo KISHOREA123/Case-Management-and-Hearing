@@ -43,6 +43,8 @@ const createHearing = async (req, res) => {
 
         await createTimelineEntry(req.body.case_id, 'Hearing Scheduled', `New hearing scheduled for ${new Date(req.body.hearing_date).toLocaleDateString()} at ${req.body.hearing_time}`, req.user.id);
 
+        const parentCase = await Case.findById(req.body.case_id);
+
         res.status(201).json(hearing);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -54,14 +56,19 @@ const createHearing = async (req, res) => {
 // @access  Private (Admin, Lawyer)
 const updateHearing = async (req, res) => {
     try {
+        const oldHearing = await Hearing.findById(req.params.id);
+        const oldStatus = oldHearing ? oldHearing.status : null;
+
         const hearing = await Hearing.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
         });
 
-        if (req.body.status === 'Completed') {
+        if (req.body.status === 'Completed' && oldStatus !== 'Completed') {
             await createTimelineEntry(hearing.case_id, 'Hearing Completed', `Hearing on ${new Date(hearing.hearing_date).toLocaleDateString()} marked as completed`, req.user.id);
         }
+
+        const parentCase = await Case.findById(hearing.case_id);
 
         res.json(hearing);
     } catch (error) {
@@ -79,6 +86,8 @@ const deleteHearing = async (req, res) => {
         if (!hearing) {
             return res.status(404).json({ message: 'Hearing not found' });
         }
+
+        const parentCase = await Case.findById(hearing.case_id);
 
         res.json({ message: 'Hearing removed' });
     } catch (error) {

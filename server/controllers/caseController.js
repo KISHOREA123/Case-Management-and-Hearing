@@ -1,4 +1,5 @@
-const { Case, Client, Tag } = require('../models');
+const { Case, Client, Hearing, HearingNote, Invoice, CaseDocument, DocumentFolder, CaseTimeline, Conversation, Message, Notification } = require('../models');
+const CaseDeadline = require('../models/CaseDeadline');
 const { createTimelineEntry } = require('./timelineController');
 
 // @desc    Get all cases
@@ -80,7 +81,6 @@ const createCase = async (req, res) => {
     try {
         const {
             case_title,
-            case_number,
             case_type_id,
             petitioner,
             defender,
@@ -88,11 +88,18 @@ const createCase = async (req, res) => {
             filing_date,
             description,
             lawyer_id,
-            priority,
-            tags
+            priority
         } = req.body;
 
+        // Auto-generate unique case number: CMH-YYYY-XXXX
+        const year = new Date().getFullYear();
+        const totalCases = await Case.countDocuments();
+        const seq = String(totalCases + 1).padStart(4, '0');
+        const case_number = `CMH-${year}-${seq}`;
+
         const assignedLawyerId = req.user.role === 'admin' ? lawyer_id : req.user.id;
+
+        console.log('[createCase] generated case_number:', case_number, '| title:', case_title);
 
         const newCase = await Case.create({
             case_title,
@@ -104,30 +111,38 @@ const createCase = async (req, res) => {
             court_id,
             filing_date,
             description,
-            priority: priority || 'Medium',
-            tags: tags || []
+            priority: priority || 'Medium'
         });
 
         // Log timeline
         await createTimelineEntry(newCase._id, 'Case Created', `Case ${case_number} created with status ${newCase.status}`, req.user.id);
 
-        // Client auto-creation/update
-        let client = await Client.findOne({
-            name: petitioner,
-            $or: [{ related_case_id: null }, { related_case_id: newCase._id }]
-        });
-
-        if (!client) {
-            await Client.create({
-                name: petitioner,
-                related_case_id: newCase._id,
-                assigned_lawyer: assignedLawyerId
+        // Client auto-creation/update for both Petitioner and Defender
+        const syncClient = async (name, role) => {
+            let client = await Client.findOne({
+                name: name,
+                $or: [{ related_case_id: null }, { related_case_id: newCase._id }]
             });
-        } else {
-            client.related_case_id = newCase._id;
-            client.assigned_lawyer = assignedLawyerId;
-            await client.save();
-        }
+
+            if (!client) {
+                await Client.create({
+                    name: name,
+                    related_case_id: newCase._id,
+                    assigned_lawyer: assignedLawyerId,
+                    role: role
+                });
+            } else {
+                client.related_case_id = newCase._id;
+                client.assigned_lawyer = assignedLawyerId;
+                client.role = role;
+                await client.save();
+            }
+        };
+
+        await Promise.all([
+            syncClient(petitioner, 'Petitioner'),
+            syncClient(defender, 'Defender')
+        ]);
 
         res.status(201).json(newCase);
     } catch (error) {
@@ -162,6 +177,34 @@ const updateCase = async (req, res) => {
             await createTimelineEntry(caseItem._id, 'Case Status Updated', `Status changed from ${oldStatus} to ${req.body.status}`, req.user.id);
         }
 
+        // Sync clients if petitioner or defender changed
+        if (req.body.petitioner || req.body.defender) {
+            const syncClient = async (name, role) => {
+                if (!name) return;
+                let client = await Client.findOne({
+                    name: name,
+                    $or: [{ related_case_id: null }, { related_case_id: caseItem._id }]
+                });
+
+                if (!client) {
+                    await Client.create({
+                        name: name,
+                        related_case_id: caseItem._id,
+                        assigned_lawyer: caseItem.lawyer_id,
+                        role: role
+                    });
+                } else {
+                    client.related_case_id = caseItem._id;
+                    client.role = role;
+                    await client.save();
+                }
+            };
+            await Promise.all([
+                syncClient(req.body.petitioner, 'Petitioner'),
+                syncClient(req.body.defender, 'Defender')
+            ]);
+        }
+
         res.json(caseItem);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -179,8 +222,36 @@ const deleteCase = async (req, res) => {
             return res.status(404).json({ message: 'Case not found' });
         }
 
-        await Case.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Case removed' });
+        const caseId = req.params.id;
+
+        // 1. Find all hearings for this case, then delete their notes
+        const hearings = await Hearing.find({ case_id: caseId }).select('_id');
+        const hearingIds = hearings.map(h => h._id);
+        await HearingNote.deleteMany({ hearing_id: { $in: hearingIds } });
+
+        // 2. Find all conversations and delete their messages
+        const conversations = await Conversation.find({ case_id: caseId }).select('_id');
+        const convIds = conversations.map(c => c._id);
+        await Message.deleteMany({ conversation_id: { $in: convIds } });
+
+        // 3. Cascade delete all directly related records
+        await Promise.all([
+            Hearing.deleteMany({ case_id: caseId }),
+            Invoice.deleteMany({ case_id: caseId }),
+            CaseDocument.deleteMany({ case_id: caseId }),
+            DocumentFolder.deleteMany({ case_id: caseId }),
+            CaseTimeline.deleteMany({ case_id: caseId }),
+            CaseDeadline.deleteMany({ case_id: caseId }),
+            Conversation.deleteMany({ case_id: caseId }),
+            Notification.deleteMany({ reference_id: caseId }),
+            // Delete clients that belong to this case
+            Client.deleteMany({ related_case_id: caseId })
+        ]);
+
+        // 4. Finally delete the case itself
+        await Case.findByIdAndDelete(caseId);
+
+        res.json({ message: 'Case and all related data removed successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

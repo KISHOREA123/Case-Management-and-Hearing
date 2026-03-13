@@ -9,6 +9,7 @@ const CustomSelect = ({
     placeholder = "Select an option",
     label,
     required = false,
+    isMulti = false,
     className
 }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -16,12 +17,36 @@ const CustomSelect = ({
     const containerRef = useRef(null);
     const searchInputRef = useRef(null);
 
-    const selectedOption = options.find(opt => opt.value === value);
+    const getSelected = () => {
+        if (isMulti) {
+            return options.filter(opt => Array.isArray(value) && value.includes(opt.value));
+        }
+        return options.find(opt => opt.value === value);
+    };
+
+    const selected = getSelected();
 
     const filteredOptions = options.filter(opt =>
         opt.label.toLowerCase().includes(search.toLowerCase()) ||
         (opt.sublabel && opt.sublabel.toLowerCase().includes(search.toLowerCase()))
     );
+
+    const handleSelect = (val) => {
+        if (isMulti) {
+            const newValue = Array.isArray(value) ? [...value] : [];
+            const index = newValue.indexOf(val);
+            if (index > -1) {
+                newValue.splice(index, 1);
+            } else {
+                newValue.push(val);
+            }
+            onChange(newValue);
+        } else {
+            onChange(val);
+            setIsOpen(false);
+            setSearch('');
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -54,10 +79,25 @@ const CustomSelect = ({
                     isOpen && "ring-2 ring-primary/20 bg-background border-primary/50"
                 )}
             >
-                <span className={cn("truncate", !selectedOption && "text-muted-foreground")}>
-                    {selectedOption ? selectedOption.label : placeholder}
-                </span>
-                <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
+                <div className="flex flex-wrap gap-1 items-center overflow-hidden">
+                    {isMulti ? (
+                        Array.isArray(selected) && selected.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                                {selected.map(opt => (
+                                    <span key={opt.value} className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
+                                        {opt.label}
+                                        <X className="w-2.5 h-2.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleSelect(opt.value); }} />
+                                    </span>
+                                ))}
+                            </div>
+                        ) : <span className="text-muted-foreground">{placeholder}</span>
+                    ) : (
+                        <span className={cn("truncate", !selected && "text-muted-foreground")}>
+                            {selected ? selected.label : placeholder}
+                        </span>
+                    )}
+                </div>
+                <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0", isOpen && "rotate-180")} />
             </div>
 
             {isOpen && (
@@ -79,26 +119,28 @@ const CustomSelect = ({
 
                     <div className="max-h-60 overflow-y-auto no-scrollbar">
                         {filteredOptions.length > 0 ? (
-                            filteredOptions.map((opt) => (
-                                <div
-                                    key={opt.value}
-                                    onClick={() => {
-                                        onChange(opt.value);
-                                        setIsOpen(false);
-                                        setSearch('');
-                                    }}
-                                    className={cn(
-                                        "px-4 py-2.5 text-sm cursor-pointer hover:bg-primary/10 flex items-center justify-between group transition-colors",
-                                        value === opt.value && "bg-primary/5 text-primary"
-                                    )}
-                                >
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">{opt.label}</span>
-                                        {opt.sublabel && <span className="text-[10px] text-muted-foreground group-hover:text-primary/70">{opt.sublabel}</span>}
+                            filteredOptions.map((opt) => {
+                                const isSelected = isMulti ? (Array.isArray(value) && value.includes(opt.value)) : (value === opt.value);
+                                return (
+                                    <div
+                                        key={opt.value}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSelect(opt.value);
+                                        }}
+                                        className={cn(
+                                            "px-4 py-2.5 text-sm cursor-pointer hover:bg-primary/10 flex items-center justify-between group transition-colors",
+                                            isSelected && "bg-primary/5 text-primary"
+                                        )}
+                                    >
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">{opt.label}</span>
+                                            {opt.sublabel && <span className="text-[10px] text-muted-foreground group-hover:text-primary/70">{opt.sublabel}</span>}
+                                        </div>
+                                        {isSelected && <Check className="w-4 h-4" />}
                                     </div>
-                                    {value === opt.value && <Check className="w-4 h-4" />}
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="px-4 py-8 text-center text-xs text-muted-foreground italic">
                                 No results found.
