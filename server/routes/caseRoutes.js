@@ -5,12 +5,21 @@ const {
     getCaseById,
     createCase,
     updateCase,
-    deleteCase
+    deleteCase,
+    searchCaseByNumber,
+    requestAccess,
+    getAccessRequests,
+    handleAccessRequest
 } = require('../controllers/caseController');
 const { protect, authorize } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissionMiddleware');
 
 router.use(protect);
+
+router.get('/search/:number', searchCaseByNumber);
+router.post('/request-access', authorize('client'), requestAccess);
+router.get('/access-requests', authorize('lawyer', 'admin'), getAccessRequests);
+router.put('/access-requests/:id', authorize('lawyer', 'admin'), handleAccessRequest);
 
 router.route('/')
     .get(getCases)

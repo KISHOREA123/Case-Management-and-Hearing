@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Bell,
     Check,
@@ -6,7 +7,8 @@ import {
     Calendar,
     MessageSquare,
     AlertTriangle,
-    Inbox
+    Inbox,
+    Shield
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import api from '../api/axios';
@@ -17,6 +19,7 @@ const NotificationDropdown = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const dropdownRef = useRef(null);
+    const navigate = useNavigate();
 
     const fetchNotifications = async () => {
         try {
@@ -63,7 +66,18 @@ const NotificationDropdown = () => {
             case 'New Document': return <Clock className="w-4 h-4 text-green-500" />;
             case 'Chat Message': return <MessageSquare className="w-4 h-4 text-purple-500" />;
             case 'Case Update': return <AlertTriangle className="w-4 h-4 text-orange-500" />;
+            case 'access_request': return <Shield className="w-4 h-4 text-amber-500" />;
+            case 'access_response': return <Check className="w-4 h-4 text-green-500" />;
             default: return <Bell className="w-4 h-4 text-primary" />;
+        }
+    };
+
+    const handleNotificationClick = (notif) => {
+        markAsRead(notif._id);
+        if (notif.type === 'access_request') {
+            navigate('/access-requests');
+        } else if (notif.type === 'access_response') {
+            navigate('/client-dashboard');
         }
     };
 
@@ -102,7 +116,7 @@ const NotificationDropdown = () => {
                                             "p-4 transition-colors hover:bg-accent/30 cursor-pointer flex gap-3",
                                             !notif.is_read && "bg-primary/5"
                                         )}
-                                        onClick={() => markAsRead(notif._id)}
+                                        onClick={() => handleNotificationClick(notif)}
                                     >
                                         <div className="w-8 h-8 rounded-full bg-background flex items-center justify-center shrink-0 border border-border shadow-sm">
                                             {getIcon(notif.type)}
@@ -116,7 +130,7 @@ const NotificationDropdown = () => {
                                             </div>
                                             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{notif.message}</p>
                                             <p className="text-[10px] text-muted-foreground mt-2 font-medium">
-                                                {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                                                {notif.createdAt ? formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true }) : 'Just now'}
                                             </p>
                                         </div>
                                     </div>

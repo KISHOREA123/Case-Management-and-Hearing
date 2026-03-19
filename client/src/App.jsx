@@ -24,6 +24,7 @@ import CalendarPage from './pages/CalendarPage';
 import ChatPage from './pages/ChatPage';
 import CaseTypesPage from './pages/CaseTypesPage';
 import RolePermissionsPage from './pages/RolePermissionsPage';
+import AccessRequestsPage from './pages/AccessRequestsPage';
 
 function App() {
   const { user } = useAuth();
@@ -52,6 +53,7 @@ function App() {
         <Route path="/permissions" element={<ProtectedRoute roles={['admin']}><RolePermissionsPage /></ProtectedRoute>} />
         <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+        <Route path="/access-requests" element={<ProtectedRoute roles={['admin', 'lawyer']}><AccessRequestsPage /></ProtectedRoute>} />
       </Route>
 
       {/* Fallback */}

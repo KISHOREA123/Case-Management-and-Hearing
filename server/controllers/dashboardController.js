@@ -1,4 +1,4 @@
-const { Case, Hearing, Client, User, Invoice, CaseTimeline, Notification } = require('../models');
+const { Case, Hearing, Client, User, Invoice, CaseTimeline, Notification, AccessRequest } = require('../models');
 
 // @desc    Get dashboard statistics based on user role
 // @route   GET /api/dashboard
@@ -111,48 +111,54 @@ const getDashboardData = async (req, res) => {
         }
 
         if (role === 'client') {
-            const client = await Client.findOne({ user_id: userId }).populate({
-                path: 'related_case_id',
+            const approvedRequests = await AccessRequest.find({
+                client_id: userId,
+                status: 'Approved'
+            }).populate({
+                path: 'case_id',
                 populate: { path: 'hearings' }
             });
 
-            if (!client || !client.related_case_id) {
+            if (approvedRequests.length === 0) {
                 return res.json({
                     stats: [
-                        { title: 'Active Cases', value: '0' },
-                        { title: 'Next Hearing', value: 'None' },
-                        { title: 'Case Status', value: 'N/A' },
-                        { title: 'Pending Invoices', value: '0' },
+                        { title: 'Active Cases', value: '0', description: 'Request access above' },
+                        { title: 'Next Hearing', value: 'None', description: '--' },
+                        { title: 'Case Status', value: 'N/A', description: '--' },
+                        { title: 'Pending Invoices', value: '0', description: '--' },
                     ],
                     timeline: [],
                     documents: []
                 });
             }
 
-            const myCase = client.related_case_id;
+            // For now, take the first approved case for dashboard stats
+            const myCase = approvedRequests[0].case_id;
             const nextHearing = await Hearing.findOne({
                 case_id: myCase._id,
-                date: { $gte: new Date() }
-            }).sort('date');
+                hearing_date: { $gte: new Date() }
+            }).sort('hearing_date');
 
-            const pendingInvoices = await Invoice.countDocuments({
+            // Find client record for invoice calculation
+            const client = await Client.findOne({ user_id: userId, related_case_id: myCase._id });
+            const pendingInvoices = client ? await Invoice.countDocuments({
                 client_id: client._id,
                 status: 'Unpaid'
-            });
+            }) : 0;
 
-            const timelineEntries = await CaseTimeline.find({ case_id: myCase._id }).sort('created_at');
+            const timelineEntries = await CaseTimeline.find({ case_id: myCase._id }).sort('-created_at');
 
             return res.json({
                 stats: [
-                    { title: 'Active Cases', value: '1', icon: 'Briefcase' },
-                    { title: 'Next Hearing', value: nextHearing ? nextHearing.hearing_date.toLocaleDateString() : 'TBD', description: nextHearing ? nextHearing.title : '' },
-                    { title: 'Case Status', value: myCase.status || 'Active', description: 'Real-time update' },
+                    { title: 'Active Cases', value: approvedRequests.length.toString(), icon: 'Briefcase', description: 'Approved cases' },
+                    { title: 'Next Hearing', value: nextHearing ? new Date(nextHearing.hearing_date).toLocaleDateString() : 'TBD', description: nextHearing ? nextHearing.title : 'No upcoming hearings' },
+                    { title: 'Case Status', value: myCase.status || 'Active', description: 'Latest update' },
                     { title: 'Pending Invoices', value: pendingInvoices.toString(), description: 'Check billing' },
                 ],
                 timeline: timelineEntries.map(t => ({
                     title: t.event_type,
                     description: t.description,
-                    date: t.created_at.toLocaleDateString(),
+                    date: new Date(t.created_at).toLocaleDateString(),
                     done: true,
                     active: false
                 })),

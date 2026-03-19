@@ -233,13 +233,17 @@ const CasesPage = () => {
                                             <Link to={`/cases/${c._id}`} className="p-1 text-muted-foreground hover:text-primary transition-colors">
                                                 <Eye className="w-4 h-4" />
                                             </Link>
-                                            <button onClick={() => handleEdit(c)} className="p-1 text-muted-foreground hover:text-blue-500 transition-colors">
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                            {user?.role === 'admin' && (
-                                                <button onClick={() => handleDeleteCase(c._id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                            {(user?.role === 'admin' || user?.role === 'lawyer') && (
+                                                <>
+                                                    <button onClick={() => handleEdit(c)} className="p-1 text-muted-foreground hover:text-blue-500 transition-colors">
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    {user?.role === 'admin' && (
+                                                        <button onClick={() => handleDeleteCase(c._id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </td>

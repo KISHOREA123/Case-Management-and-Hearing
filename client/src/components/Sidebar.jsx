@@ -31,6 +31,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         { title: 'Courts', icon: <Gavel className="w-5 h-5" />, path: '/courts' },
         { title: 'Invoices', icon: <FileText className="w-5 h-5" />, path: '/invoices' },
         { title: 'Permissions', icon: <Shield className="w-5 h-5" />, path: '/permissions' },
+        { title: 'Access Requests', icon: <Shield className="w-5 h-5" />, path: '/access-requests' },
     ];
 
     const lawyerLinks = [
@@ -39,6 +40,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         { title: 'Hearings', icon: <Calendar className="w-5 h-5" />, path: '/hearings' },
         { title: 'Clients', icon: <Users className="w-5 h-5" />, path: '/clients' },
         { title: 'Invoices', icon: <FileText className="w-5 h-5" />, path: '/invoices' },
+        { title: 'Access Requests', icon: <Shield className="w-5 h-5" />, path: '/access-requests' },
     ];
 
     const clientLinks = [

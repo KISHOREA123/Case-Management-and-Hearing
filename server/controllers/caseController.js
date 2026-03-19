@@ -1,4 +1,4 @@
-const { Case, Client, Hearing, HearingNote, Invoice, CaseDocument, DocumentFolder, CaseTimeline, Conversation, Message, Notification } = require('../models');
+const { Case, Client, Hearing, HearingNote, Invoice, CaseDocument, DocumentFolder, CaseTimeline, Conversation, Message, Notification, AccessRequest, User } = require('../models');
 const CaseDeadline = require('../models/CaseDeadline');
 const { createTimelineEntry } = require('./timelineController');
 
@@ -9,25 +9,182 @@ const getCases = async (req, res) => {
     try {
         let query = {};
 
+        const userRole = req.user.role?.toLowerCase().trim();
+        console.log(`[getCases] User ${req.user.id} has role: "${userRole}"`);
+
         // RBAC filtering
-        if (req.user.role === 'lawyer') {
+        if (userRole === 'lawyer') {
             query.lawyer_id = req.user.id;
-        } else if (req.user.role === 'client') {
-            const client = await Client.findOne({ user_id: req.user.id });
-            if (client && client.related_case_id) {
-                query._id = client.related_case_id;
-            } else {
+        } else if (userRole === 'client') {
+            // Find approved access requests for this user
+            const approvedRequests = await AccessRequest.find({
+                client_id: req.user.id,
+                status: 'Approved'
+            }).select('case_id');
+
+            const allowedCaseIds = approvedRequests.map(r => r.case_id);
+            console.log(`[getCases] Client ${req.user.id} has ${allowedCaseIds.length} approved cases`);
+            
+            if (allowedCaseIds.length === 0) {
+                console.log('[getCases] No approved cases found for client, returning empty array');
                 return res.status(200).json([]);
             }
+            query._id = { $in: allowedCaseIds };
+        } else if (userRole !== 'admin') {
+            // If not admin, lawyer or client, they shouldn't see anything
+            console.log(`[getCases] Unknown role "${userRole}", returning empty array`);
+            return res.status(200).json([]);
         }
 
+        console.log(`[getCases] Final Query: ${JSON.stringify(query)}`);
+
         const cases = await Case.find(query)
-            .populate('lawyer_id', 'name email')
+            .populate('lawyer_id', 'name email ' + (req.user.role === 'admin' ? 'phone' : ''))
             .populate('case_type_id')
             .populate('court_id')
             .sort('-createdAt');
 
         res.json(cases);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Search case by number (Publicly available for logged in users)
+// @route   GET /api/cases/search/:number
+// @access  Private
+const searchCaseByNumber = async (req, res) => {
+    try {
+        const { number } = req.params;
+        console.log(`[searchCaseByNumber] Searching for: ${number}`);
+        
+        // Use case-insensitive regex for exact match
+        const caseItem = await Case.findOne({ 
+            case_number: { $regex: new RegExp(`^${number.trim()}$`, 'i') } 
+        })
+            .select('case_number case_title lawyer_id'); // Only select minimal fields
+
+        if (!caseItem) {
+            return res.status(404).json({ message: 'Case not found' });
+        }
+
+        // Check if user already has access or a pending request
+        const existingRequest = await AccessRequest.findOne({
+            client_id: req.user.id,
+            case_id: caseItem._id
+        });
+
+        res.json({
+            _id: caseItem._id,
+            case_number: caseItem.case_number,
+            lawyer_id: caseItem.lawyer_id,
+            requestStatus: existingRequest ? existingRequest.status : null
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Request access to a case
+// @route   POST /api/cases/request-access
+// @access  Private (Client)
+const requestAccess = async (req, res) => {
+    try {
+        const { caseId } = req.body;
+
+        const caseItem = await Case.findById(caseId);
+        if (!caseItem) {
+            return res.status(404).json({ message: 'Case not found' });
+        }
+
+        // Check for existing request
+        const existingRequest = await AccessRequest.findOne({
+            client_id: req.user.id,
+            case_id: caseId
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ message: 'Request already exists' });
+        }
+
+        const request = await AccessRequest.create({
+            client_id: req.user.id,
+            case_id: caseId,
+            lawyer_id: caseItem.lawyer_id,
+            status: 'Pending',
+            client_details: {
+                name: req.user.name,
+                phone: req.user.phone
+            }
+        });
+
+        // Notify lawyer
+        await Notification.create({
+            user_id: caseItem.lawyer_id,
+            title: 'New Case Access Request',
+            message: `Client ${req.user.name} (${req.user.phone}) requested access to case ${caseItem.case_number}.`,
+            type: 'access_request'
+        });
+
+        res.status(201).json(request);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get access requests for lawyer
+// @route   GET /api/cases/access-requests
+// @access  Private (Lawyer, Admin)
+const getAccessRequests = async (req, res) => {
+    try {
+        let query = { status: 'Pending' };
+        if (req.user.role === 'lawyer') {
+            query.lawyer_id = req.user.id;
+        }
+
+        const requests = await AccessRequest.find(query)
+            .populate('client_id', 'name email phone')
+            .populate('case_id', 'case_number case_title')
+            .sort('-createdAt');
+
+        res.json(requests);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Handle access request (Approve/Reject)
+// @route   PUT /api/cases/access-requests/:id
+// @access  Private (Lawyer, Admin)
+const handleAccessRequest = async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!['Approved', 'Rejected'].includes(status)) {
+            return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        const request = await AccessRequest.findById(req.params.id);
+        if (!request) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        // Permissions check
+        if (req.user.role === 'lawyer' && request.lawyer_id.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        request.status = status;
+        await request.save();
+
+        // Notify client
+        await Notification.create({
+            user_id: request.client_id,
+            title: `Case Access ${status}`,
+            message: `Your request for access to case has been ${status.toLowerCase()}.`,
+            type: 'access_response'
+        });
+
+        res.json(request);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -62,8 +219,12 @@ const getCaseById = async (req, res) => {
         }
 
         if (req.user.role === 'client') {
-            const client = await Client.findOne({ user_id: req.user.id });
-            if (!client || !client.related_case_id || client.related_case_id.toString() !== caseItem._id.toString()) {
+            const approvedAccess = await AccessRequest.findOne({
+                client_id: req.user.id,
+                case_id: caseItem._id,
+                status: 'Approved'
+            });
+            if (!approvedAccess) {
                 return res.status(403).json({ message: 'Not authorized to view this case' });
             }
         }
@@ -262,5 +423,9 @@ module.exports = {
     getCaseById,
     createCase,
     updateCase,
-    deleteCase
+    deleteCase,
+    searchCaseByNumber,
+    requestAccess,
+    getAccessRequests,
+    handleAccessRequest
 };
