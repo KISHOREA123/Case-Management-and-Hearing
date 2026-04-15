@@ -394,15 +394,6 @@ const CaseDetailsPage = () => {
                         <h3 className="font-bold mb-6">Parties Involved</h3>
                         <div className="space-y-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-                                    <Scale className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Lawyer</p>
-                                    <p className="font-bold">{caseData.lawyer?.name}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 bg-accent rounded-full flex items-center justify-center">
                                     <User className="w-5 h-5 text-muted-foreground" />
                                 </div>

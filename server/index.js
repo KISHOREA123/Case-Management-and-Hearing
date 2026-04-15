@@ -1,4 +1,5 @@
-﻿const express = require('express');
+const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
@@ -64,6 +65,17 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/cases/:id/deadlines', deadlineRoutes);
 app.use('/api/deadlines', deadlineDashboardRoutes);
+
+// --- Static Frontend Serving (PROD) ---
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the client/dist directory
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+
+  // For any other route, serve the index.html from dist
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../client', 'dist', 'index.html'));
+  });
+}
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

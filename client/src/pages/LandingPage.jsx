@@ -287,7 +287,7 @@ const LandingPage = () => {
                     </div>
                     <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
                         {[
-                            { role: 'Admin', icon: <Shield className="w-8 h-8" />, color: 'from-blue-500 to-violet-600', desc: 'Full control over users, cases, hearings, lawyers, clients, permissions, and billing.', perks: ['User & role management', 'System-wide case overview', 'Invoice & payment tracking', 'Permission configuration'] },
+                            { role: 'Admin', icon: <Shield className="w-8 h-8" />, color: 'from-blue-500 to-violet-600', desc: 'Full control over users, cases, hearings, lawyers, clients, and billing.', perks: ['User & role management', 'System-wide case overview', 'Invoice & payment tracking', 'Secure access'] },
                             { role: 'Lawyer', icon: <Scale className="w-8 h-8" />, color: 'from-violet-500 to-pink-600', desc: 'Manage assigned cases, schedule hearings, handle documents, and communicate with clients.', perks: ['Assigned case workspace', 'Hearing management', 'Client communication', 'Document handling'] },
                             { role: 'Client', icon: <Users className="w-8 h-8" />, color: 'from-emerald-500 to-teal-600', desc: 'View your case progress, download documents, check invoices, and communicate securely.', perks: ['Case status visibility', 'Document downloads', 'Invoice access', 'Secure messaging'] },
                         ].map((r, i) => (
